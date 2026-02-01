@@ -250,8 +250,9 @@ class App(TkinterDnD.Tk):
         super().__init__()
 
         self.title("STEP Converter")
-        self.geometry("500x450")
-        self.minsize(450, 430)
+        # Increase height to accommodate status bar and padding
+        self.geometry("500x550")
+        self.minsize(450, 500)
 
         ctk.set_appearance_mode("system")
         ctk.set_default_color_theme("blue")
