@@ -1,4 +1,4 @@
-"""GUI for STEP to OBJ converter with drag & drop support."""
+"""GUI for STEP converter with drag & drop support."""
 
 import threading
 from pathlib import Path
@@ -6,7 +6,7 @@ from tkinter import filedialog, StringVar
 from tkinterdnd2 import DND_FILES, TkinterDnD
 import customtkinter as ctk
 
-from .converter import convert_step_to_obj, ConversionResult
+from .converter import convert_step, ConversionResult, OutputFormat
 
 
 class DropZone(ctk.CTkFrame):
@@ -107,6 +107,43 @@ class FileInfoFrame(ctk.CTkFrame):
             self.file_label.configure(text="")
 
 
+class FormatSelectorFrame(ctk.CTkFrame):
+    """Output format selector."""
+
+    def __init__(self, master, **kwargs):
+        super().__init__(master, **kwargs)
+        self.configure(fg_color="transparent")
+
+        row = ctk.CTkFrame(self, fg_color="transparent")
+        row.pack(fill="x", padx=10, pady=5)
+
+        label = ctk.CTkLabel(
+            row,
+            text="形式:",
+            font=ctk.CTkFont(size=13),
+            width=60
+        )
+        label.pack(side="left")
+
+        self.format_var = StringVar(value="OBJ")
+        self.format_combo = ctk.CTkComboBox(
+            row,
+            values=["OBJ", "FBX"],
+            variable=self.format_var,
+            state="readonly",
+            width=120,
+            font=ctk.CTkFont(size=13)
+        )
+        self.format_combo.pack(side="left", padx=(10, 0))
+
+    def get_format(self) -> OutputFormat:
+        """Get selected output format."""
+        value = self.format_var.get()
+        if value == "FBX":
+            return OutputFormat.FBX
+        return OutputFormat.OBJ
+
+
 class OutputSettingsFrame(ctk.CTkFrame):
     """Output directory settings."""
 
@@ -115,11 +152,9 @@ class OutputSettingsFrame(ctk.CTkFrame):
         self.configure(fg_color="transparent")
         self.output_dir: Path | None = None
 
-        # Row container
         row = ctk.CTkFrame(self, fg_color="transparent")
         row.pack(fill="x", padx=10, pady=5)
 
-        # Label
         label = ctk.CTkLabel(
             row,
             text="出力先:",
@@ -128,7 +163,6 @@ class OutputSettingsFrame(ctk.CTkFrame):
         )
         label.pack(side="left")
 
-        # Output path display
         self.path_var = StringVar(value="(入力ファイルと同じ場所)")
         self.path_entry = ctk.CTkEntry(
             row,
@@ -138,7 +172,6 @@ class OutputSettingsFrame(ctk.CTkFrame):
         )
         self.path_entry.pack(side="left", fill="x", expand=True, padx=(10, 10))
 
-        # Browse button
         self.browse_btn = ctk.CTkButton(
             row,
             text="変更",
@@ -216,16 +249,13 @@ class App(TkinterDnD.Tk):
     def __init__(self):
         super().__init__()
 
-        # Window setup
-        self.title("STEP to OBJ Converter")
-        self.geometry("500x420")
-        self.minsize(450, 400)
+        self.title("STEP Converter")
+        self.geometry("500x450")
+        self.minsize(450, 430)
 
-        # Apply customtkinter theme
         ctk.set_appearance_mode("system")
         ctk.set_default_color_theme("blue")
 
-        # State
         self.selected_file: Path | None = None
 
         self._create_widgets()
@@ -233,17 +263,16 @@ class App(TkinterDnD.Tk):
 
     def _create_widgets(self):
         """Create all UI widgets."""
-        # Main container
         self.main_frame = ctk.CTkFrame(self, fg_color="transparent")
         self.main_frame.pack(fill="both", expand=True, padx=20, pady=20)
 
         # Title
-        title = ctk.CTkLabel(
+        self.title_label = ctk.CTkLabel(
             self.main_frame,
-            text="STEP → OBJ 変換",
+            text="STEP → OBJ / FBX 変換",
             font=ctk.CTkFont(size=22, weight="bold")
         )
-        title.pack(pady=(0, 15))
+        self.title_label.pack(pady=(0, 15))
 
         # Drop zone
         self.drop_zone = DropZone(
@@ -257,9 +286,13 @@ class App(TkinterDnD.Tk):
         self.file_info = FileInfoFrame(self.main_frame)
         self.file_info.pack(fill="x")
 
+        # Format selector
+        self.format_selector = FormatSelectorFrame(self.main_frame)
+        self.format_selector.pack(fill="x", pady=5)
+
         # Output settings
         self.output_settings = OutputSettingsFrame(self.main_frame)
-        self.output_settings.pack(fill="x", pady=10)
+        self.output_settings.pack(fill="x", pady=5)
 
         # Convert button
         self.convert_btn = ConvertButton(
@@ -292,12 +325,10 @@ class App(TkinterDnD.Tk):
         """Handle file drop event."""
         self.drop_zone.set_drag_state(False)
 
-        # Parse dropped file path (handle Windows brace format)
         file_path = event.data.strip()
         if file_path.startswith("{") and file_path.endswith("}"):
             file_path = file_path[1:-1]
 
-        # Handle multiple files - take first one
         if " " in file_path and not Path(file_path).exists():
             file_path = file_path.split()[0]
 
@@ -307,7 +338,6 @@ class App(TkinterDnD.Tk):
         """Handle file selection."""
         path = Path(file_path)
 
-        # Validate file extension
         if path.suffix.lower() not in (".step", ".stp"):
             self.status_bar.set_status("STEPファイル (.step, .stp) を選択してください", is_error=True)
             return
@@ -326,21 +356,20 @@ class App(TkinterDnD.Tk):
         if not self.selected_file:
             return
 
-        # Determine output path
+        output_format = self.format_selector.get_format()
         output_dir = self.output_settings.get_output_dir()
         if output_dir is None:
             output_dir = self.selected_file.parent
 
-        output_path = output_dir / (self.selected_file.stem + ".obj")
+        extension = "." + output_format.value
+        output_path = output_dir / (self.selected_file.stem + extension)
 
-        # Disable button and show progress
         self.convert_btn.configure(state="disabled", text="変換中...")
         self.status_bar.show_progress(True)
         self.status_bar.set_status("変換中...")
 
-        # Run conversion in background thread
         def run_conversion():
-            result = convert_step_to_obj(self.selected_file, output_path)
+            result = convert_step(self.selected_file, output_path, output_format)
             self.after(0, lambda: self._on_conversion_complete(result))
 
         thread = threading.Thread(target=run_conversion, daemon=True)

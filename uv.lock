@@ -478,6 +478,8 @@ source = { editable = "." }
 dependencies = [
     { name = "cadquery-ocp" },
     { name = "customtkinter" },
+    { name = "numpy", version = "2.2.6", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11'" },
+    { name = "numpy", version = "2.4.2", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.11'" },
     { name = "tkinterdnd2" },
 ]
 
@@ -485,6 +487,7 @@ dependencies = [
 requires-dist = [
     { name = "cadquery-ocp", specifier = ">=7.7.0" },
     { name = "customtkinter", specifier = ">=5.2.0" },
+    { name = "numpy", specifier = ">=1.24.0" },
     { name = "tkinterdnd2", specifier = ">=0.3.0" },
 ]
 
