@@ -144,6 +144,46 @@ class FormatSelectorFrame(ctk.CTkFrame):
         return OutputFormat.OBJ
 
 
+class QualitySelectorFrame(ctk.CTkFrame):
+    """Mesh quality selector."""
+
+    def __init__(self, master, **kwargs):
+        super().__init__(master, **kwargs)
+        self.configure(fg_color="transparent")
+
+        row = ctk.CTkFrame(self, fg_color="transparent")
+        row.pack(fill="x", padx=10, pady=5)
+
+        label = ctk.CTkLabel(
+            row,
+            text="品質:",
+            font=ctk.CTkFont(size=13),
+            width=60
+        )
+        label.pack(side="left")
+
+        self.quality_var = StringVar(value="中 (推奨)")
+        self.quality_combo = ctk.CTkComboBox(
+            row,
+            values=["高 (サイズ大)", "中 (推奨)", "低 (軽量)"],
+            variable=self.quality_var,
+            state="readonly",
+            width=120,
+            font=ctk.CTkFont(size=13)
+        )
+        self.quality_combo.pack(side="left", padx=(10, 0))
+    
+    def get_quality_params(self) -> tuple[float, float]:
+        """Get linear and angular deflection based on selection."""
+        val = self.quality_var.get()
+        if val.startswith("高"):
+            return 0.01, 0.1  # High quality
+        elif val.startswith("低"):
+            return 0.5, 0.5   # Low quality
+        else:
+            return 0.1, 0.2   # Medium (Default)
+
+
 class OutputSettingsFrame(ctk.CTkFrame):
     """Output directory settings."""
 
@@ -290,6 +330,10 @@ class App(TkinterDnD.Tk):
         # Format selector
         self.format_selector = FormatSelectorFrame(self.main_frame)
         self.format_selector.pack(fill="x", pady=5)
+        
+        # Quality selector
+        self.quality_selector = QualitySelectorFrame(self.main_frame)
+        self.quality_selector.pack(fill="x", pady=5)
 
         # Output settings
         self.output_settings = OutputSettingsFrame(self.main_frame)
@@ -370,7 +414,14 @@ class App(TkinterDnD.Tk):
         self.status_bar.set_status("変換中...")
 
         def run_conversion():
-            result = convert_step(self.selected_file, output_path, output_format)
+            lin_def, ang_def = self.quality_selector.get_quality_params()
+            result = convert_step(
+                self.selected_file, 
+                output_path, 
+                output_format,
+                linear_deflection=lin_def,
+                angular_deflection=ang_def
+            )
             self.after(0, lambda: self._on_conversion_complete(result))
 
         thread = threading.Thread(target=run_conversion, daemon=True)

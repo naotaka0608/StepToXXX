@@ -617,7 +617,7 @@ def write_fbx_file(
 
             f.write(f"\t\tVertices: *{len(vertices_flat)} {{\n")
             f.write("\t\t\ta: ")
-            f.write(",".join(f"{v:.6f}" for v in vertices_flat))
+            f.write(",".join(f"{v:.4f}" for v in vertices_flat))
             f.write("\n\t\t}\n")
 
             f.write(f"\t\tPolygonVertexIndex: *{len(polygon_indices)} {{\n")
@@ -633,7 +633,7 @@ def write_fbx_file(
             
             f.write(f"\t\t\tNormals: *{len(normals_flat_values)} {{\n")
             f.write("\t\t\t\ta: ")
-            f.write(",".join(f"{n:.6f}" for n in normals_flat_values))
+            f.write(",".join(f"{n:.4f}" for n in normals_flat_values))
             f.write("\n\t\t\t}\n")
             
             f.write(f"\t\t\tNormalsIndex: *{len(normal_indices_flat)} {{\n")
@@ -692,8 +692,8 @@ def write_fbx_file(
             f.write('\t\tShadingModel: "phong"\n')
             f.write('\t\tMultiLayer: 0\n')
             f.write('\t\tProperties70:  {\n')
-            f.write(f'\t\t\tP: "DiffuseColor", "Color", "", "A",{r:.6f},{g:.6f},{b:.6f}\n')
-            f.write(f'\t\t\tP: "Diffuse", "Vector3D", "Vector", "",{r:.6f},{g:.6f},{b:.6f}\n')
+            f.write(f'\t\t\tP: "DiffuseColor", "Color", "", "A",{r:.4f},{g:.4f},{b:.4f}\n')
+            f.write(f'\t\t\tP: "Diffuse", "Vector3D", "Vector", "",{r:.4f},{g:.4f},{b:.4f}\n')
             # Add Ambient/Specular for brighter look
             f.write(f'\t\t\tP: "AmbientColor", "Color", "", "A",0.5,0.5,0.5\n')
             f.write(f'\t\t\tP: "SpecularColor", "Color", "", "A",0.4,0.4,0.4\n')
